@@ -3,10 +3,10 @@
 <title>Aberrated ↔ Corrected</title>
 <style>
   :root { --bar: 50%; }
+  html, body { height: 100%; }
   body { margin: 0; background: #111; color: #ddd; font-family: system-ui, sans-serif; }
   .wrap { max-width: 1280px; margin: 0 auto; padding: 16px; }
-  /* CHANGE aspect-ratio to 16/9 for landscape 1280x720, or 9/16 for portrait 720x1280 */
-  .stage { position: relative; aspect-ratio: 16/9; background: #000; user-select: none; }
+  .stage { position: relative; width: 100%; background: #000; user-select: none; }
   .stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
   .aberrated { clip-path: inset(0 calc(100% - var(--bar)) 0 0); }
   .bar { position: absolute; top: 0; bottom: 0; left: var(--bar); transform: translateX(-1px);
@@ -14,12 +14,12 @@
   .ui { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
   input[type="range"] { width: 100%; }
   .pct { min-width: 3.5ch; text-align: right; }
-  .err { color: #f77; font-size: 14px; margin-top: 8px; display:none; }
+  .err { color: #f77; font-size: 14px; margin-top: 8px; display:none; white-space: pre-wrap; }
 </style>
 
 <div class="wrap">
-  <div class="stage" id="stage">
-    <!-- Use relative paths; encode space as %20 -->
+  <div class="stage" id="stage" style="height: 60vh;">
+    <!-- RELATIVE PATHS: encode the space as %20 -->
     <img id="imgCorrected" src="CorrectedImages/corrected.webp" alt="corrected">
     <img id="imgAberrated" src="CorrectedImages/aberrated.webp" alt="aberrated" class="aberrated">
     <div class="bar" id="bar"></div>
@@ -58,13 +58,27 @@
   stage.addEventListener('pointerup',   () => { dragging = false; });
   stage.addEventListener('pointercancel', () => { dragging = false; });
 
-  // Show explicit errors if images fail to load
-  function handleError(img, label){
+  function fail(img, label){
     err.style.display = 'block';
-    err.textContent = `Failed to load ${label} image: ${img.src}. Check the path/case/branch.`;
+    err.textContent += `Failed to load ${label}: ${img.src}\n`;
   }
-  imgA.onerror = () => handleError(imgA, 'aberrated');
-  imgC.onerror = () => handleError(imgC, 'corrected');
+  imgA.onerror = () => fail(imgA, 'aberrated');
+  imgC.onerror = () => fail(imgC, 'corrected');
 
-  setBar(slider.value);
+  // Size stage by intrinsic image aspect ratio once corrected loads
+  function resizeStage(){
+    if (!imgC.naturalWidth || !imgC.naturalHeight) return;
+    const w = stage.clientWidth || stage.offsetWidth || 800;
+    const ratio = imgC.naturalHeight / imgC.naturalWidth; // H/W
+    stage.style.height = Math.round(w * ratio) + 'px';
+  }
+  function init(){
+    setBar(slider.value);
+    resizeStage();
+  }
+  imgC.addEventListener('load', init);
+  window.addEventListener('resize', resizeStage);
+
+  // In case it was already cached
+  if (imgC.complete) init();
 </script>

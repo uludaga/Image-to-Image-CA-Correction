@@ -1,0 +1,56 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Aberrated ↔ Corrected</title>
+<style>
+  :root { --bar: 50%; }
+  body { margin: 0; background: #111; color: #ddd; font-family: system-ui, sans-serif; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 16px; }
+  .stage { position: relative; aspect-ratio: 16/9; background: #000; user-select: none; }
+  .stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .aberrated { clip-path: inset(0 calc(100% - var(--bar)) 0 0); }
+  .bar { position: absolute; top: 0; bottom: 0; left: var(--bar); transform: translateX(-1px);
+         width: 2px; background: #fff9; pointer-events: none; }
+  .ui { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+  input[type="range"] { width: 100%; }
+  .pct { min-width: 3.5ch; text-align: right; }
+</style>
+
+<div class="wrap">
+  <div class="stage" id="stage">
+    <!-- use raw.githubusercontent.com URLs -->
+    <img src="https://raw.githubusercontent.com/xxxx/Image-to-Image-CA-Correction/main/Corrected%20Images/corrected.webp" alt="corrected">
+    <img src="https://github.com/uludaga/Image-to-Image-CA-Correction/blob/main/Corrected%20Images/aberrated.webp" alt="aberrated" class="aberrated">
+    <div class="bar" id="bar"></div>
+  </div>
+
+  <div class="ui">
+    <label for="slider">Bar</label>
+    <input id="slider" type="range" min="0" max="100" value="50" step="1" />
+    <span class="pct" id="pct">50%</span>
+  </div>
+
+  <p style="opacity:.7;margin-top:6px">0% = full corrected · 100% = full aberrated</p>
+</div>
+
+<script>
+  const root = document.documentElement;
+  const slider = document.getElementById('slider');
+  const pct = document.getElementById('pct');
+  const stage = document.getElementById('stage');
+
+  function setBar(v){ root.style.setProperty('--bar', v + '%'); pct.textContent = v + '%'; }
+  slider.addEventListener('input', e => setBar(e.target.value));
+
+  function posToPct(clientX){
+    const r = stage.getBoundingClientRect();
+    const x = Math.min(Math.max(clientX - r.left, 0), r.width);
+    return Math.round(100 * x / r.width);
+  }
+  let dragging = false;
+  stage.addEventListener('pointerdown', e => { dragging = true; const p = posToPct(e.clientX); slider.value = p; setBar(p); stage.setPointerCapture(e.pointerId); });
+  stage.addEventListener('pointermove', e => { if (!dragging) return; const p = posToPct(e.clientX); slider.value = p; setBar(p); });
+  stage.addEventListener('pointerup',   () => { dragging = false; });
+  stage.addEventListener('pointercancel', () => { dragging = false; });
+
+  setBar(slider.value);
+</script>

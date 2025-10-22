@@ -5,6 +5,7 @@
   :root { --bar: 50%; }
   body { margin: 0; background: #111; color: #ddd; font-family: system-ui, sans-serif; }
   .wrap { max-width: 1280px; margin: 0 auto; padding: 16px; }
+  /* CHANGE aspect-ratio to 16/9 for landscape 1280x720, or 9/16 for portrait 720x1280 */
   .stage { position: relative; aspect-ratio: 16/9; background: #000; user-select: none; }
   .stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
   .aberrated { clip-path: inset(0 calc(100% - var(--bar)) 0 0); }
@@ -13,13 +14,14 @@
   .ui { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
   input[type="range"] { width: 100%; }
   .pct { min-width: 3.5ch; text-align: right; }
+  .err { color: #f77; font-size: 14px; margin-top: 8px; display:none; }
 </style>
 
 <div class="wrap">
   <div class="stage" id="stage">
-    <!-- use raw.githubusercontent.com URLs -->
-    <img src="Corrected%20Images/corrected.webp" alt="corrected">
-    <img src="Corrected%20Images/aberrated.webp" alt="aberrated" class="aberrated">
+    <!-- Use relative paths; encode space as %20 -->
+    <img id="imgCorrected" src="Corrected%20Images/corrected.webp" alt="corrected">
+    <img id="imgAberrated" src="Corrected%20Images/aberrated.webp" alt="aberrated" class="aberrated">
     <div class="bar" id="bar"></div>
   </div>
 
@@ -29,6 +31,7 @@
     <span class="pct" id="pct">50%</span>
   </div>
 
+  <div id="err" class="err"></div>
   <p style="opacity:.7;margin-top:6px">0% = full corrected · 100% = full aberrated</p>
 </div>
 
@@ -37,6 +40,9 @@
   const slider = document.getElementById('slider');
   const pct = document.getElementById('pct');
   const stage = document.getElementById('stage');
+  const err = document.getElementById('err');
+  const imgA = document.getElementById('imgAberrated');
+  const imgC = document.getElementById('imgCorrected');
 
   function setBar(v){ root.style.setProperty('--bar', v + '%'); pct.textContent = v + '%'; }
   slider.addEventListener('input', e => setBar(e.target.value));
@@ -51,6 +57,14 @@
   stage.addEventListener('pointermove', e => { if (!dragging) return; const p = posToPct(e.clientX); slider.value = p; setBar(p); });
   stage.addEventListener('pointerup',   () => { dragging = false; });
   stage.addEventListener('pointercancel', () => { dragging = false; });
+
+  // Show explicit errors if images fail to load
+  function handleError(img, label){
+    err.style.display = 'block';
+    err.textContent = `Failed to load ${label} image: ${img.src}. Check the path/case/branch.`;
+  }
+  imgA.onerror = () => handleError(imgA, 'aberrated');
+  imgC.onerror = () => handleError(imgC, 'corrected');
 
   setBar(slider.value);
 </script>

@@ -1,0 +1,90 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Aberrated ↔ Corrected</title>
+<style>
+  :root { --bar: 50%; }
+  html, body { height: 100%; }
+  body { margin: 0; background: #111; color: #ddd; font-family: system-ui, sans-serif; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 16px; }
+  .stage { position: relative; width: 100%; background: #000; user-select: none; }
+  .stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .aberrated { clip-path: inset(0 calc(100% - var(--bar)) 0 0); }
+  .bar { position: absolute; top: 0; bottom: 0; left: var(--bar); transform: translateX(-1px);
+         width: 2px; background: #fff9; pointer-events: none; }
+  .ui { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+  input[type="range"] { width: 100%; }
+  .pct { min-width: 3.5ch; text-align: right; }
+  .err { color: #f77; font-size: 14px; margin-top: 8px; display:none; white-space: pre-wrap; }
+</style>
+
+<div class="wrap">
+  <div class="stage" id="stage" style="height: 60vh;">
+    <img id="imgCorrected" alt="corrected">
+    <img id="imgAberrated"  alt="aberrated" class="aberrated">
+    <div class="bar" id="bar"></div>
+  </div>
+
+  <div class="ui">
+    <label for="slider">Bar</label>
+    <input id="slider" type="range" min="0" max="100" value="50" step="1" />
+    <span class="pct" id="pct">50%</span>
+  </div>
+
+  <div id="err" class="err"></div>
+  <p style="opacity:.7;margin-top:6px">0% = full corrected · 100% = full aberrated</p>
+</div>
+
+<script>
+  const root = document.documentElement;
+  const slider = document.getElementById('slider');
+  const pct = document.getElementById('pct');
+  const stage = document.getElementById('stage');
+  const err = document.getElementById('err');
+  const imgA = document.getElementById('imgAberrated');
+  const imgC = document.getElementById('imgCorrected');
+
+  // NEW: read ?id=sceneX from the URL
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id') || 'scene1';
+  document.title = `Aberrated ↔ Corrected – ${id}`;
+
+  // Point to the pair folder
+  imgC.src = `pairs/${encodeURIComponent(id)}/corrected.webp`;
+  imgA.src = `pairs/${encodeURIComponent(id)}/aberrated.webp`;
+
+  function setBar(v){ root.style.setProperty('--bar', v + '%'); pct.textContent = v + '%'; }
+  slider.addEventListener('input', e => setBar(e.target.value));
+
+  function posToPct(clientX){
+    const r = stage.getBoundingClientRect();
+    const x = Math.min(Math.max(clientX - r.left, 0), r.width);
+    return Math.round(100 * x / r.width);
+  }
+  let dragging = false;
+  stage.addEventListener('pointerdown', e => { dragging = true; const p = posToPct(e.clientX); slider.value = p; setBar(p); stage.setPointerCapture(e.pointerId); });
+  stage.addEventListener('pointermove', e => { if (!dragging) return; const p = posToPct(e.clientX); slider.value = p; setBar(p); });
+  stage.addEventListener('pointerup',   () => { dragging = false; });
+  stage.addEventListener('pointercancel', () => { dragging = false; });
+
+  function fail(img, label){
+    err.style.display = 'block';
+    err.textContent += `Failed to load ${label}: ${img.src}\n`;
+  }
+  imgA.onerror = () => fail(imgA, 'aberrated');
+  imgC.onerror = () => fail(imgC, 'corrected');
+
+  function resizeStage(){
+    if (!imgC.naturalWidth || !imgC.naturalHeight) return;
+    const w = stage.clientWidth || stage.offsetWidth || 800;
+    const ratio = imgC.naturalHeight / imgC.naturalWidth; // H/W
+    stage.style.height = Math.round(w * ratio) + 'px';
+  }
+  function init(){
+    setBar(slider.value);
+    resizeStage();
+  }
+  imgC.addEventListener('load', init);
+  window.addEventListener('resize', resizeStage);
+
+  if (imgC.complete) init();
+</script>
